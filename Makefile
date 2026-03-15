@@ -1,13 +1,14 @@
 # --- VARIABLES ---
-VERSION      ?= 1.0.0
+VERSION      ?= latest
 REGISTRY     ?= ghcr.io
 REPO         ?= dstoffel
 APP_NAME     ?= capi-argocd-sync
 BUNDLE_NAME  ?= $(APP_NAME)-bundle
 PACKAGE_NAME ?= capi-argocd-sync.kubetbx.io
 
-APP_IMAGE    := $(REGISTRY)/$(REPO)/$(APP_NAME):$(VERSION)
-BUNDLE_IMAGE := $(REGISTRY)/$(REPO)/$(BUNDLE_NAME):$(VERSION)
+APP_IMAGE    		:= $(REGISTRY)/$(REPO)/$(APP_NAME):$(VERSION)
+APP_IMAGE_LATEST    := $(REGISTRY)/$(REPO)/$(APP_NAME):latest
+BUNDLE_IMAGE 		:= $(REGISTRY)/$(REPO)/$(BUNDLE_NAME):$(VERSION)
 
 VENV_DIR      := src/.venv
 VENV_ACTIVATE := $(VENV_DIR)/bin/activate
@@ -35,23 +36,35 @@ test: $(VENV_ACTIVATE)
 	fi
 
 release-image: test
-	@echo "==> Syncing image version in values.yml..."
-	sed -i 's|image: .*|image: "$(APP_IMAGE)"|g' deploy/carvel/config/values.yml
 	@echo "==> Building Docker image $(APP_IMAGE)..."
 	docker build -t $(APP_IMAGE) src/
+	docker tag $(APP_IMAGE) $(APP_IMAGE_LATEST)
 	@echo "==> Pushing Docker image $(APP_IMAGE)..."
 	docker push $(APP_IMAGE)
+	@echo "==> Pushing Docker image $(APP_IMAGE_LATEST)..."
+	docker push $(APP_IMAGE_LATEST)
 
 release-bundle: release-image
-	@echo "==> Resolving image digests with kbld (requires pushed image)..."
-	mkdir deploy/carvel/.imgpkg
-	kbld -f deploy/carvel/config/ --imgpkg-lock-output deploy/carvel/.imgpkg/images.yml
+	@echo "==> Preparing Carvel bundle staging directory..."
+	rm -rf .build/carvel
+	mkdir -p .build/carvel/config
+	cp -R deploy/carvel/config/* .build/carvel/config/
+
+	@echo "==> Injecting image version into staging values.yml..."
+	sed -i.bak -e 's|image: .*|image: "$(APP_IMAGE)"|g' .build/carvel/config/values.yml
+	rm -f .build/carvel/config/values.yml.bak
+
+	@echo "==> Resolving image digests with kbld..."
+	mkdir -p .build/carvel/.imgpkg
+	kbld -f .build/carvel/config/ --imgpkg-lock-output .build/carvel/.imgpkg/images.yml
+
 	@echo "==> Pushing Carvel imgpkg bundle $(BUNDLE_IMAGE)..."
 	@if [ -n "$(REGISTRY_USERNAME)" ] && [ -n "$(REGISTRY_PASSWORD)" ]; then \
-		imgpkg push -b $(BUNDLE_IMAGE) -f deploy/carvel/ --registry-username "$(REGISTRY_USERNAME)" --registry-password "$(REGISTRY_PASSWORD)"; \
+		imgpkg push -b $(BUNDLE_IMAGE) -f .build/carvel/ --registry-username "$(REGISTRY_USERNAME)" --registry-password "$(REGISTRY_PASSWORD)"; \
 	else \
-		imgpkg push -b $(BUNDLE_IMAGE) -f deploy/carvel/; \
+		imgpkg push -b $(BUNDLE_IMAGE) -f .build/carvel/; \
 	fi
+	@echo "==> Success! Bundle $(BUNDLE_IMAGE) pushed successfully."
 
 release-package: release-bundle
 	@echo "==> Generating OpenAPI schema..."
@@ -75,5 +88,5 @@ clean:
 generate-base:
 	@echo "==> Generating plain Kubernetes manifests from Carvel templates..."
 	mkdir -p deploy/base
-	ytt -f deploy/carvel/config/deploy.yaml -f deploy/carvel/config/values.yml > deploy/base/generated-manifests.yaml
+	ytt -f deploy/carvel/config/deploy.yaml -f deploy/carvel/config/values.yml -v image=$(APP_IMAGE_LATEST) > deploy/base/generated-manifests.yaml
 	@echo "==> Success!  Base manifests generated in deploy/base/generated-manifests.yaml"
