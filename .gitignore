@@ -1,0 +1,4 @@
+outputs/*.yaml
+src/.venv
+src/__pycache__/
+deploy/carvel/.imgpkg

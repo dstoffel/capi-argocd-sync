@@ -1,0 +1,129 @@
+#@ load("@ytt:data", "data")
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app: capi-argocd-sync
+    pod-security.kubernetes.io/enforce: restricted
+  name: #@ data.values.namespace
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capi-argocd-sync-sa
+  namespace: #@ data.values.namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: capi-argocd-sync-cluster-reader
+rules:
+- apiGroups: ["cluster.x-k8s.io"] 
+  resources: ["clusters"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: capi-argocd-sync-global-binding
+subjects:
+- kind: ServiceAccount
+  name: capi-argocd-sync-sa
+  namespace: #@ data.values.namespace
+roleRef:
+  kind: ClusterRole
+  name: capi-argocd-sync-cluster-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-argocd-sync-config
+  namespace: #@ data.values.namespace
+stringData:
+  LOG_LEVEL: #@ data.values.logLevel
+  ARGOCD_DEFAULT_DESTINATION: #@ data.values.argocdDefaultDestination
+  SYNC_LABEL: #@ data.values.syncLabel
+  SYNC_LABEL_PREFIX: #@ data.values.syncLabelPrefix
+  ARGOCD_DESTINATION_ANNOTATION: #@ data.values.argocdDestinationAnnotation
+  INSECURE: #@ str(data.values.insecure).lower()
+  SUPERVISOR_CONTEXTS: #@ data.values.supervisorContexts
+  ARGOCD_CONTEXTS: #@ data.values.argocdContexts
+  INCLUSTER_MAPPING: #@ data.values.inclusterMapping
+  GIT_CACHE_DIR: #@ data.values.gitCacheDir
+  GIT_USERNAME: #@ data.values.gitUsername
+  GIT_TOKEN: #@ data.values.gitToken
+  GIT_BRANCH: #@ data.values.gitBranch
+
+#@ if data.values.additionalKubeconfig:
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-argocd-sync-kubeconfig
+  namespace: #@ data.values.namespace
+stringData:
+  config: #@ data.values.additionalKubeconfig
+#@ end
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: capi-argocd-sync
+  namespace:  #@ data.values.namespace
+spec:
+  schedule: #@ data.values.schedule
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: #@ data.values.ttlSecondsAfterFinished
+      template:
+        spec:
+          serviceAccountName: capi-argocd-sync-sa
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: capi-argocd-sync
+            image: #@ data.values.image
+            imagePullPolicy: #@ data.values.imagePullPolicy
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              privileged: false
+              readOnlyRootFilesystem: true
+            #@ if data.values.additionalKubeconfig:
+            env:
+            - name: KUBECONFIG
+              value: /etc/kubeconfig/config
+            #@ end
+            envFrom:
+            - secretRef:
+                name: capi-argocd-sync-config
+            volumeMounts:
+            - name: tmp-dir
+              mountPath: #@ data.values.gitCacheDir
+            #@ if data.values.additionalKubeconfig:
+            - name: kubeconfig-volume
+              mountPath: /etc/kubeconfig
+              readOnly: true
+            #@ end
+          restartPolicy: #@ data.values.restartPolicy
+          volumes:
+          - name: tmp-dir
+            emptyDir: {}
+          #@ if data.values.additionalKubeconfig:
+          - name: kubeconfig-volume
+            secret:
+              secretName: capi-argocd-sync-kubeconfig
+          #@ end

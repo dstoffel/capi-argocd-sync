@@ -1,0 +1,81 @@
+#@data/values-schema
+---
+#@schema/title "Namespace"
+#@schema/desc "Namespace for the argocd-sync application."
+namespace: capi-argocd-sync
+
+#@schema/title "TTL Seconds After Finished"
+#@schema/desc "Time to live for the job after it finishes execution."
+ttlSecondsAfterFinished: 172800
+
+#@schema/title "Restart Policy"
+#@schema/desc "Job restart policy (e.g., Never, OnFailure)."
+restartPolicy: Never
+
+#@schema/title "Cron Schedule"
+#@schema/desc "Cron expression for the sync schedule."
+schedule: "*/5 * * * *"
+
+#@schema/title "Container Image"
+#@schema/desc "Docker image for the argocd-sync job."
+image: "ghcr.io/dstoffel/capi-argocd-sync:latest"
+
+#@schema/title "Image Pull Policy"
+#@schema/desc "Kubernetes image pull policy."
+imagePullPolicy: IfNotPresent
+
+#@schema/title "Log Level"
+#@schema/desc "Logging verbosity for the Python script (INFO, DEBUG, WARNING)."
+logLevel: INFO
+
+#@schema/title "ArgoCD Default Destination"
+#@schema/desc "Fallback destination for ArgoCD if no annotation is present."
+argocdDefaultDestination: "in-ns://"
+
+#@schema/title "Sync Label"
+#@schema/desc "Label to identify CAPI clusters that need to be synced."
+syncLabel: "argocd-sync/enabled"
+
+#@schema/title "Sync Label Prefix"
+#@schema/desc "Prefix of labels to dynamically copy from CAPI to the ArgoCD secret."
+syncLabelPrefix: "argocd-sync-label/"
+
+#@schema/title "ArgoCD Destination Annotation"
+#@schema/desc "Annotation on the CAPI cluster defining where to sync the secret."
+argocdDestinationAnnotation: "argocd-sync/destinations"
+
+#@schema/title "Insecure TLS"
+#@schema/desc "Allow insecure TLS connections to the managed clusters."
+insecure: false
+
+#@schema/title "Supervisor Contexts"
+#@schema/desc "Comma-separated list of CAPI management clusters to scan."
+supervisorContexts: "in-cluster://"
+
+#@schema/title "ArgoCD Contexts"
+#@schema/desc "Comma-separated list of allowed ArgoCD destinations (K8s contexts or Git paths)."
+argocdContexts: "in-cluster://"
+
+#@schema/title "In-Cluster Mapping"
+#@schema/desc "Name mapping for the local in-cluster context."
+inclusterMapping: "in-cluster"
+
+#@schema/title "Git Cache Directory"
+#@schema/desc "Local temporary directory for cloning Git repositories."
+gitCacheDir: "/tmp"
+
+#@schema/title "Git Username"
+#@schema/desc "Username for Git repository authentication."
+gitUsername: ""
+
+#@schema/title "Git Token"
+#@schema/desc "Personal Access Token (PAT) or password for Git authentication."
+gitToken: ""
+
+#@schema/title "Git Branch"
+#@schema/desc "Target Git branch for pushing ArgoCD cluster secrets."
+gitBranch: "main"
+
+#@schema/title "Additional Kubeconfig"
+#@schema/desc "Optional: Additional kubeconfig content in YAML string format to mount into the pod for authenticating with external clusters."
+additionalKubeconfig: ""

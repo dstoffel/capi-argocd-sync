@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app: capi-argocd-sync
+    pod-security.kubernetes.io/enforce: restricted
+  name: capi-argocd-sync
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capi-argocd-sync-sa
+  namespace: capi-argocd-sync
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: capi-argocd-sync-cluster-reader
+rules:
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: capi-argocd-sync-global-binding
+subjects:
+- kind: ServiceAccount
+  name: capi-argocd-sync-sa
+  namespace: capi-argocd-sync
+roleRef:
+  kind: ClusterRole
+  name: capi-argocd-sync-cluster-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-argocd-sync-config
+  namespace: capi-argocd-sync
+stringData:
+  LOG_LEVEL: INFO
+  ARGOCD_DEFAULT_DESTINATION: in-ns://
+  SYNC_LABEL: argocd-sync/enabled
+  SYNC_LABEL_PREFIX: argocd-sync-label/
+  ARGOCD_DESTINATION_ANNOTATION: argocd-sync/destinations
+  INSECURE: "false"
+  SUPERVISOR_CONTEXTS: in-cluster://
+  ARGOCD_CONTEXTS: in-cluster://
+  INCLUSTER_MAPPING: in-cluster
+  GIT_CACHE_DIR: /tmp
+  GIT_USERNAME: ""
+  GIT_TOKEN: ""
+  GIT_BRANCH: main
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: capi-argocd-sync
+  namespace: capi-argocd-sync
+spec:
+  schedule: '*/5 * * * *'
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 172800
+      template:
+        spec:
+          serviceAccountName: capi-argocd-sync-sa
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: capi-argocd-sync
+            image: ghcr.io/dstoffel/capi-argocd-sync:latest
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              privileged: false
+              readOnlyRootFilesystem: true
+            envFrom:
+            - secretRef:
+                name: capi-argocd-sync-config
+            volumeMounts:
+            - name: tmp-dir
+              mountPath: /tmp
+          restartPolicy: Never
+          volumes:
+          - name: tmp-dir
+            emptyDir: {}
