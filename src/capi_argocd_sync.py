@@ -334,7 +334,7 @@ def get_all_argocd_clusters(kube_manager, valid_argocd_targets, valid_supervisor
         if target['type'] == 'k8s':
             clusters = kube_manager.get_argocd_clusters(target['raw'], valid_supervisor_targets)
             all_clusters.update(clusters)
-            log.info(f"Clusters ArgoCD (K8s)[{SYNC_LABEL}=true] in {target['raw']}: {len(clusters)}")
+            log.info(f"Clusters ArgoCD (K8s) in {target['raw']}: {len(clusters)}")
     return all_clusters
 
 
@@ -576,7 +576,7 @@ def cleanup_clusters(kube_manager, active_secrets, all_existing_secrets):
 
 
 def main():
-    log.info(f"Syncing clusters, SUPERVISOR_CONTEXTS={SUPERVISOR_CONTEXTS}, ARGOCD_CONTEXTS={ARGOCD_CONTEXTS}")
+    log.info(f"Syncing clusters, SUPERVISOR_CONTEXTS={SUPERVISOR_CONTEXTS}, ARGOCD_CONTEXTS={ARGOCD_CONTEXTS}, INCLUSTER_MAPPING={INCLUSTER_MAPPING}")
     
     kube_manager = KubeManager()
     git_manager = GitManager()
@@ -593,6 +593,7 @@ def main():
         if vt['type'] == 'k8s':
             clusters = kube_manager.get_capi_clusters(vt['raw'], valid_argocd_targets, git_manager)
             capi_clusters.update(clusters)
+            log.info(f"CAPI Clusters found in {vt['raw']}: {len(clusters)}")
     
     all_existing_secrets = {}
     all_existing_secrets.update(get_all_argocd_clusters(kube_manager, valid_argocd_targets, valid_supervisor_targets))
