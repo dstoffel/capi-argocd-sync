@@ -59,11 +59,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: carvel-package-manifest-${{ env.VERSION }}
-          path: outputs/package-capi-argocd-sync.yaml
+          path: deploy/carvel/repo/packages/capi-argocd-sync/${{ env.VERSION }}.yaml
 
       - name: 🎉 Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: outputs/package-capi-argocd-sync.yaml
+          files: deploy/carvel/repo/packages/capi-argocd-sync/${{ env.VERSION }}.yaml
           generate_release_notes: true

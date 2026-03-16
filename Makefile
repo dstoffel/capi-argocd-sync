@@ -1,5 +1,4 @@
 # --- VARIABLES ---
-VERSION      ?= latest
 REGISTRY     ?= ghcr.io
 REPO         ?= dstoffel
 APP_NAME     ?= capi-argocd-sync
@@ -16,7 +15,14 @@ VENV_ACTIVATE := $(VENV_DIR)/bin/activate
 
 
 # --- TARGETS ---
-.PHONY: test release-image release-bundle release-package all clean generate-base
+.PHONY: check-version test release-image release-bundle release-package all clean generate-base
+
+check-version:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error ==> variable VERSION is required"; \
+		echo "Usage: make release-repo VERSION=1.2.0"; \
+		exit 1; \
+	fi
 
 $(VENV_ACTIVATE): src/requirements.txt
 	@echo "==> Creating virtual environment..."
@@ -27,7 +33,7 @@ $(VENV_ACTIVATE): src/requirements.txt
 	@touch $(VENV_ACTIVATE) # Met à jour la date du fichier pour Make
 
 
-test: $(VENV_ACTIVATE)
+test: check-version $(VENV_ACTIVATE)
 	@echo "==> Running Python tests..."
 	@if [ "$$CI" = "true" ] || [ "$$GITHUB_ACTIONS" = "true" ]; then \
 		echo "==> ☁️ CI Environment Detected: Running ONLY mocked tests (test_sync.py)"; \
@@ -37,7 +43,7 @@ test: $(VENV_ACTIVATE)
 		. $(VENV_ACTIVATE) && cd src && pytest -v; \
 	fi
 
-release-image: test
+release-image: check-version test
 	@echo "==> Building Docker image $(APP_IMAGE)..."
 	docker build -t $(APP_IMAGE) src/
 	docker tag $(APP_IMAGE) $(APP_IMAGE_LATEST)
@@ -46,7 +52,7 @@ release-image: test
 	@echo "==> Pushing Docker image $(APP_IMAGE_LATEST)..."
 	docker push $(APP_IMAGE_LATEST)
 
-release-bundle: release-image
+release-bundle: check-version release-image
 	@echo "==> Preparing Carvel bundle staging directory..."
 	rm -rf .build/carvel
 	mkdir -p .build/carvel/config
@@ -78,13 +84,13 @@ release-package: release-bundle
 		-v packagename="$(PACKAGE_NAME)" \
 		-v imagepath="$(REGISTRY)/$(REPO)/$(BUNDLE_NAME)" \
 		> deploy/carvel/repo/packages/capi-argocd-sync/$(VERSION).yaml
-	@echo "==> Success! Artifact outputs/package-$(APP_NAME).yaml is ready."
+	@echo "==> Success! Artifact deploy/carvel/repo/packages/capi-argocd-sync/$(VERSION).yaml is ready."
 
 all: release-package release-repo
 
 clean:
 	@echo "==> Cleaning generated files..."
-	rm -f outputs/schema-openapi.yaml outputs/package-$(APP_NAME).yaml
+	rm -f outputs/schema-openapi.yaml
 	rm -f deploy/carvel/.imgpkg/images.yml
 
 generate-base:
