@@ -1,0 +1,11 @@
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: capi-argocd-sync.kubetbx.io
+spec:
+  displayName: "ArgoCD Sync"
+  longDescription: "Add/Sync VKS clusters to ArgoCD instances"
+  shortDescription: "VKS Clusters to ArgoCD"
+  categories:
+  - demo

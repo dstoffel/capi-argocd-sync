@@ -1,0 +1,18 @@
+---
+apiVersion: imgpkg.carvel.dev/v1alpha1
+images:
+- annotations:
+    kbld.carvel.dev/id: ghcr.io/dstoffel/capi-argocd-sync-bundle:0.0.1
+    kbld.carvel.dev/origins: |
+      - resolved:
+          tag: 0.0.1
+          url: ghcr.io/dstoffel/capi-argocd-sync-bundle:0.0.1
+  image: ghcr.io/dstoffel/capi-argocd-sync-bundle@sha256:1840d3713cbec57855cad2257e37f92ad762e3b5c5d977de1c1af838788fd75a
+- annotations:
+    kbld.carvel.dev/id: ghcr.io/dstoffel/capi-argocd-sync-bundle:latest
+    kbld.carvel.dev/origins: |
+      - resolved:
+          tag: latest
+          url: ghcr.io/dstoffel/capi-argocd-sync-bundle:latest
+  image: ghcr.io/dstoffel/capi-argocd-sync-bundle@sha256:322ab762d43191107f8a8f912bd824dbe6a9e0f328dba6fdd507158722bf2671
+kind: ImagesLock

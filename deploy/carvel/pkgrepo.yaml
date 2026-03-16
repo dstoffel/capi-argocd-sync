@@ -1,0 +1,8 @@
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageRepository
+metadata:
+  name: capi-argocd-sync-repo
+spec:
+  fetch:
+    imgpkgBundle:
+      image: ghcr.io/dstoffel/capi-argocd-sync-repo:latest

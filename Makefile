@@ -9,9 +9,11 @@ PACKAGE_NAME ?= capi-argocd-sync.kubetbx.io
 APP_IMAGE    		:= $(REGISTRY)/$(REPO)/$(APP_NAME):$(VERSION)
 APP_IMAGE_LATEST    := $(REGISTRY)/$(REPO)/$(APP_NAME):latest
 BUNDLE_IMAGE 		:= $(REGISTRY)/$(REPO)/$(BUNDLE_NAME):$(VERSION)
+REPO_IMAGE 			?=$(REGISTRY)/$(REPO)/capi-argocd-sync-repo:latest
 
 VENV_DIR      := src/.venv
 VENV_ACTIVATE := $(VENV_DIR)/bin/activate
+
 
 # --- TARGETS ---
 .PHONY: test release-image release-bundle release-package all clean generate-base
@@ -75,10 +77,10 @@ release-package: release-bundle
 		-v version="$(VERSION)" \
 		-v packagename="$(PACKAGE_NAME)" \
 		-v imagepath="$(REGISTRY)/$(REPO)/$(BUNDLE_NAME)" \
-		> outputs/package-$(APP_NAME).yaml
+		> deploy/carvel/repo/packages/capi-argocd-sync/$(VERSION).yaml
 	@echo "==> Success! Artifact outputs/package-$(APP_NAME).yaml is ready."
 
-all: release-package
+all: release-package release-repo
 
 clean:
 	@echo "==> Cleaning generated files..."
@@ -90,3 +92,16 @@ generate-base:
 	mkdir -p deploy/base
 	ytt -f deploy/carvel/config/deploy.yaml -f deploy/carvel/config/values.yml -v image=$(APP_IMAGE_LATEST) > deploy/base/generated-manifests.yaml
 	@echo "==> Success!  Base manifests generated in deploy/base/generated-manifests.yaml"
+
+release-repo: release-package
+	@echo "==> Resolving image digests with kbld..."
+	mkdir -p deploy/carvel/repo/.imgpkg/
+	kbld -f deploy/carvel/repo/packages --imgpkg-lock-output deploy/carvel/repo/.imgpkg/images.yml
+
+	@echo "==> Pushing Carvel PackageRepository bundle $(REPO_IMAGE)..."
+	@if [ -n "$(REGISTRY_USERNAME)" ] && [ -n "$(REGISTRY_PASSWORD)" ]; then \
+		imgpkg push -b $(REPO_IMAGE) -f deploy/carvel/repo/ --registry-username "$(REGISTRY_USERNAME)" --registry-password "$(REGISTRY_PASSWORD)"; \
+	else \
+		imgpkg push -b $(REPO_IMAGE) -f deploy/carvel/repo/; \
+	fi
+	@echo "Success! PackageRepository $(REPO_IMAGE) pushed successfully."

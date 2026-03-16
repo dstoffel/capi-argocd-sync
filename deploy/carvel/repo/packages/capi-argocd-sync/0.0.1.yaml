@@ -1,0 +1,140 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: capi-argocd-sync.kubetbx.io.0.0.1
+spec:
+  refName: capi-argocd-sync.kubetbx.io
+  version: 0.0.1
+  releaseNotes: |
+    Initial release of the simple app package
+  valuesSchema:
+    openAPIv3:
+      type: object
+      additionalProperties: false
+      properties:
+        namespace:
+          title: Namespace
+          type: string
+          description: Namespace for the argocd-sync application.
+          default: capi-argocd-sync
+        ttlSecondsAfterFinished:
+          title: TTL Seconds After Finished
+          type: integer
+          description: Time to live for the job after it finishes execution.
+          default: 172800
+        restartPolicy:
+          title: Restart Policy
+          type: string
+          description: Job restart policy (e.g., Never, OnFailure).
+          default: Never
+        schedule:
+          title: Cron Schedule
+          type: string
+          description: Cron expression for the sync schedule.
+          default: '*/5 * * * *'
+        image:
+          title: Container Image
+          type: string
+          description: Docker image for the argocd-sync job.
+          default: ghcr.io/dstoffel/capi-argocd-sync:latest
+        imagePullPolicy:
+          title: Image Pull Policy
+          type: string
+          description: Kubernetes image pull policy.
+          default: IfNotPresent
+        logLevel:
+          title: Log Level
+          type: string
+          description: Logging verbosity for the Python script (INFO, DEBUG, WARNING).
+          default: INFO
+        argocdDefaultDestination:
+          title: ArgoCD Default Destination
+          type: string
+          description: Fallback destination for ArgoCD if no annotation is present.
+          default: in-ns://
+        syncLabel:
+          title: Sync Label
+          type: string
+          description: Label to identify CAPI clusters that need to be synced.
+          default: argocd-sync/enabled
+        syncLabelPrefix:
+          title: Sync Label Prefix
+          type: string
+          description: Prefix of labels to dynamically copy from CAPI to the ArgoCD secret.
+          default: argocd-sync-label/
+        argocdDestinationAnnotation:
+          title: ArgoCD Destination Annotation
+          type: string
+          description: Annotation on the CAPI cluster defining where to sync the secret.
+          default: argocd-sync/destinations
+        insecure:
+          title: Insecure TLS
+          type: boolean
+          description: Allow insecure TLS connections to the managed clusters.
+          default: false
+        supervisorContexts:
+          title: Supervisor Contexts
+          type: string
+          description: Comma-separated list of CAPI management clusters to scan.
+          default: in-cluster://
+        argocdContexts:
+          title: ArgoCD Contexts
+          type: string
+          description: Comma-separated list of allowed ArgoCD destinations (K8s contexts or Git paths).
+          default: in-cluster://
+        inclusterMapping:
+          title: In-Cluster Mapping
+          type: string
+          description: Name mapping for the local in-cluster context.
+          default: in-cluster
+        gitCacheDir:
+          title: Git Cache Directory
+          type: string
+          description: Local temporary directory for cloning Git repositories.
+          default: /tmp
+        gitUsername:
+          title: Git Username
+          type: string
+          description: Username for Git repository authentication.
+          default: ""
+        gitToken:
+          title: Git Token
+          type: string
+          description: Personal Access Token (PAT) or password for Git authentication.
+          default: ""
+        gitBranch:
+          title: Git Branch
+          type: string
+          description: Target Git branch for pushing ArgoCD cluster secrets.
+          default: main
+        additionalKubeconfig:
+          title: Additional Kubeconfig
+          type: string
+          description: 'Optional: Additional kubeconfig content in YAML string format to mount into the pod for authenticating with external clusters.'
+          default: ""
+  template:
+    spec:
+      fetch:
+      - imgpkgBundle:
+          image: ghcr.io/dstoffel/capi-argocd-sync-bundle:0.0.1
+      template:
+      - ytt:
+          paths:
+          - config/
+      - kbld:
+          paths:
+          - .imgpkg/images.yml
+          - '-'
+      deploy:
+      - kapp: {}
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: capi-argocd-sync.kubetbx.io
+spec:
+  displayName: ArgoCD Sync
+  longDescription: Add/Sync VKS clusters to ArgoCD instances
+  shortDescription: VKS Clusters to ArgoCD
+  categories:
+  - demo
