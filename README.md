@@ -156,7 +156,7 @@ spec:
       name: capi-argocd-sync-values
 ```
 
-### 4. VMware Tanzu: Supervisor Service (UI Method)
+### 4. VCF: Supervisor Service 
 If you are running a Supervisor Server (e.g., Tanzu Supervisor Services in vSphere), you can register the generated package artifacts as a new native supervisor service.
 1. In vCenter, go to **Supervisor Management** -> **Services**.
 2. Click **Add New Service** and upload the generated Artifact (e.g., `package-capi-argocd-sync.yaml`).
@@ -164,11 +164,42 @@ If you are running a Supervisor Server (e.g., Tanzu Supervisor Services in vSphe
 4. Locate the service in the **Available Services** page and click **Enable**.
 5. Specify your `values.yml` content (including `additionalKubeconfig` if required) in the provided text area.
 
-### 5. VMware Tanzu: VKS Add-on (AddonRepo / AddonInstall)
+### 5. VCF: VKS Add-on (AddonRepo / AddonInstall)
 Because this tool is packaged as a standard Carvel `PackageRepository`, you can also leverage the new Tanzu Add-on system to deploy it directly onto a vSphere Kubernetes Service (VKS) workload cluster.
 1. Create an `AddonRepo` resource on your Supervisor or workload cluster pointing to `ghcr.io/dstoffel/capi-argocd-sync-repo:latest`.
 2. Deploy an `AddonInstall` resource referencing the `capi-argocd-sync` package.
 3. Pass your custom values (like Contexts and credentials) through the `AddonInstall` configuration secret.
+
+### 6. ArgoCD Resource Hook (PostSync Job)
+If you are already managing your CAPI `Cluster` lifecycles through ArgoCD itself, you might not want a continuous background `CronJob`. Instead, you can run this controller sequentially as an **ArgoCD PostSync Hook**.
+
+**Workflow:**
+1. ArgoCD syncs and deploys your new CAPI `Cluster` manifests.
+2. A `PostDelete,PostSync` Job triggers the `capi-argocd-sync` script.
+3. The script extracts the newly generated kubeconfig and registers the cluster into ArgoCD.
+4. ArgoCD `ApplicationSet`s (e.g., using cluster generators) immediately detect the new cluster and begin deploying tenant workloads to it.
+
+**Example Job snippet:**
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: capi-argocd-sync-hook
+  annotations:
+    argocd.argoproj.io/hook: PostDelete,PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      serviceAccountName: capi-argocd-sync-sa
+      containers:
+      - name: sync
+        image: ghcr.io/dstoffel/capi-argocd-sync:latest
+        envFrom:
+        - secretRef:
+            name: capi-argocd-sync-config
+      restartPolicy: Never
+```
 
 ---
 
