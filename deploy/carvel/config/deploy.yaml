@@ -49,6 +49,7 @@ stringData:
   ARGOCD_DEFAULT_DESTINATION: #@ data.values.argocdDefaultDestination
   SYNC_LABEL: #@ data.values.syncLabel
   SYNC_LABEL_PREFIX: #@ data.values.syncLabelPrefix
+  SYNC_LABELS_DEFAULTS: #@ data.values.syncLabelDefaults
   ARGOCD_DESTINATION_ANNOTATION: #@ data.values.argocdDestinationAnnotation
   INSECURE: #@ str(data.values.insecure).lower()
   SUPERVISOR_CONTEXTS: #@ data.values.supervisorContexts
@@ -58,6 +59,7 @@ stringData:
   GIT_USERNAME: #@ data.values.gitUsername
   GIT_TOKEN: #@ data.values.gitToken
   GIT_BRANCH: #@ data.values.gitBranch
+  CLUSTER_VERSION: #@ data.values.clusterVersion
 
 #@ if data.values.additionalKubeconfig:
 ---

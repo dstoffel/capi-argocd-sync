@@ -45,11 +45,13 @@ Configure the controller behavior using the following options. If you are deploy
 | `ARGOCD_CONTEXTS` | `argocdContexts` | *(empty)* | **[Required]** Comma-separated list of allowed K8s destinations (e.g., `mgmt-cluster://argocd`). |
 | `SYNC_LABEL` | `syncLabel` | `argocd-sync/enabled` | The label used to discover eligible CAPI clusters and managed ArgoCD secrets. |
 | `SYNC_LABEL_PREFIX` | `syncLabelPrefix` | `argocd-sync-label/` | Prefix of labels to dynamically copy from CAPI to the ArgoCD secret. |
+| `SYNC_LABEL_DEFAULTS` | `syncLabelDefaults` | *(empty)* | Default labels to add to the ArgoCD secret. |
 | `ARGOCD_DESTINATION_ANNOTATION` | `argocdDestinationAnnotation` | `argocd-sync/destinations` | The annotation on the CAPI cluster defining where to push the secret. |
 | `ARGOCD_DEFAULT_DESTINATION` | `argocdDefaultDestination` | `in-ns://` | Fallback destination if the destination annotation is missing. |
 | `INCLUSTER_MAPPING` | `inclusterMapping` | *(empty)* | Maps the `in-cluster` execution to a human-readable context name (e.g., `mgmt-cluster`). |
 | `INSECURE` | `insecure` | `false` | If `true`, sets `insecure: true` in the generated ArgoCD TLS config. |
 | `LOG_LEVEL` | `logLevel` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+| `CLUSTER_VERSION` | `clusterVersion` | `v1beta2` | CAPI Cluster api-version to use. |
 
 ### External Cluster Configuration
 | Carvel Value Key | Description |

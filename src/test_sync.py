@@ -238,3 +238,61 @@ def test_cleanup_mixed_clusters(mock_core_v1, mock_get_clients, mock_exists, moc
     
     # 2. Vérifie la suppression du fichier local Git
     mock_remove.assert_called_once_with("/tmp/repo/path/orphan-git.yaml")
+
+def test_parse_default_labels():
+    """Teste le parsing de la variable d'environnement SYNC_LABELS_DEFAULTS."""
+    env_str = "mycustom/label1=zerzer, mycustom/label2=qsdqsd , invalid_label"
+    res = capi_argocd_sync._parse_kv_string(env_str)
+
+    assert len(res) == 2
+    assert res["mycustom/label1"] == "zerzer"
+    assert res["mycustom/label2"] == "qsdqsd"
+
+
+@patch('capi_argocd_sync.KubeManager._get_all_kube_clients')
+@patch('capi_argocd_sync.KubeManager.custom_objects')
+@patch('capi_argocd_sync.KubeManager.core_v1')
+def test_get_capi_clusters_with_default_labels(mock_core_v1, mock_custom_objects, mock_get_clients):
+    """Teste que les labels par défaut sont fusionnés et que les labels spécifiques priment."""
+    # Injection de valeurs par défaut pour le test
+    capi_argocd_sync.SYNC_LABELS_DEFAULTS = {
+        "global-label": "always-here",
+        "argocd-sync-label/env": "default-env"
+    }
+
+    mock_get_clients.return_value = {"sup-cluster": MagicMock()}
+    mock_custom_api = MagicMock()
+    mock_custom_objects.return_value = mock_custom_api
+
+    fake_cluster = {
+        "metadata": {
+            "name": "workload-1",
+            "namespace": "capi-system",
+            "labels": {
+                "argocd-sync-label/env": "prod", # Doit écraser le 'default-env'
+            },
+            "annotations": {
+                "argocd-sync/destinations": "in-ns://"
+            }
+        }
+    }
+    mock_custom_api.list_namespaced_custom_object.return_value = {"items": [fake_cluster]}
+
+    mock_core_api = MagicMock()
+    mock_core_v1.return_value = mock_core_api
+    mock_secret = MagicMock()
+    mock_secret.data = {"value": generate_fake_kubeconfig_b64()}
+    mock_core_api.read_namespaced_secret.return_value = mock_secret
+
+    km = capi_argocd_sync.KubeManager()
+    valid_argocd_targets = [{'type': 'k8s', 'ctx': 'sup-cluster', 'ns': 'capi-system'}]
+
+    clusters = km.get_capi_clusters("sup-cluster://capi-system", valid_argocd_targets, MagicMock())
+
+    expected_path = "sup-cluster://capi-system/workload-1"
+    cc = clusters[expected_path]
+
+    # Vérification de la fusion
+    assert cc['labels']["global-label"] == "always-here"
+    # Vérification de la précédence (le label spécifique a bien écrasé le défaut)
+    assert cc['labels']["argocd-sync-label/env"] == "prod"

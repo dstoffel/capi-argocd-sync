@@ -36,6 +36,10 @@ argocdDefaultDestination: "in-ns://"
 #@schema/desc "Label to identify CAPI clusters that need to be synced."
 syncLabel: "argocd-sync/enabled"
 
+#@schema/title "Sync Label Defaults"
+#@schema/desc "Default labels to add to the ArgoCD secret."
+syncLabelDefaults: ""
+
 #@schema/title "Sync Label Prefix"
 #@schema/desc "Prefix of labels to dynamically copy from CAPI to the ArgoCD secret."
 syncLabelPrefix: "argocd-sync-label/"
@@ -79,3 +83,7 @@ gitBranch: "main"
 #@schema/title "Additional Kubeconfig"
 #@schema/desc "Optional: Additional kubeconfig content in YAML string format to mount into the pod for authenticating with external clusters."
 additionalKubeconfig: ""
+
+#@schema/title "CAPI Cluster Version"
+#@schema/desc "CAPI Cluster api-version to use."
+clusterVersion: "v1beta2"

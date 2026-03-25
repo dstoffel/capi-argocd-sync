@@ -16,6 +16,7 @@ urllib3.disable_warnings()
 ARGOCD_DEFAULT_DESTINATION = os.getenv("ARGOCD_DEFAULT_DESTINATION", "in-ns://")
 SYNC_LABEL = os.getenv("SYNC_LABEL", "argocd-sync/enabled")
 SYNC_LABEL_PREFIX = os.getenv("SYNC_LABEL_PREFIX", "argocd-sync-label/")
+SYNC_LABELS_DEFAULTS_ENV = os.getenv("SYNC_LABELS_DEFAULTS", "")
 ARGOCD_DESTINATION_ANNOTATION = os.getenv("ARGOCD_DESTINATION_ANNOTATION", "argocd-sync/destinations")
 ORIGIN_ANNOTATION = "argocd-sync/origin"
 HASH_ANNOTATION = "argocd-sync/sha256"
@@ -46,6 +47,17 @@ DEST_REGEX = re.compile(r"^(?P<ctx>[^:]+)://(?P<namespace>.+)$")
 GIT_DEST_REGEX = re.compile(r"^git#(?P<repo>https?://.+?\.git)/(?P<path>.+\.ya?ml)$")
 GIT_TARGET_REGEX = re.compile(r"^git#(?P<repo>https?://.+?\.git)(?:/(?P<path>.*))?$")
 
+def _parse_kv_string(kv_str):
+    res = {}
+    if not kv_str: return res
+    for item in kv_str.split(','):
+        item = item.strip()
+        if '=' in item:
+            k, v = item.split('=', 1)
+            res[k.strip()] = v.strip()
+    return res
+
+SYNC_LABELS_DEFAULTS = _parse_kv_string(SYNC_LABELS_DEFAULTS_ENV)
 
 class GitManager:
     def __init__(self):
@@ -217,13 +229,15 @@ class KubeManager:
             
             raw_labels = cluster['metadata'].get('labels', {})
             filtered_labels = {k: v for k, v in raw_labels.items() if k.startswith(SYNC_LABEL_PREFIX)}
+            combined_labels = SYNC_LABELS_DEFAULTS.copy()
+            combined_labels.update(filtered_labels)
                 
             cc = {
                 'clusterPath': cluster_path,
                 'name': cluster_name,
                 'namespace': cluster_namespace,
                 'context': context,
-                'labels': filtered_labels,
+                'labels': combined_labels,
                 'kubeconfig': {'server': server, 'ca_data': ca_data, 'cert_data': cert_data, 'key_data': key_data}
             }
             
