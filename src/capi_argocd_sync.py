@@ -23,6 +23,8 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 INSECURE = os.getenv("INSECURE", "").lower() == "true"
 SUPERVISOR_CONTEXTS = os.getenv("SUPERVISOR_CONTEXTS", "")
 ARGOCD_CONTEXTS = os.getenv("ARGOCD_CONTEXTS", "")
+#TODO: loop with allversion
+CLUSTER_VERSION = os.getenv("CLUSTER_VERSION", "v1beta2")
 
 INCLUSTER_MAPPING = os.getenv("INCLUSTER_MAPPING", "").strip()
 INCLUSTER_NAME = INCLUSTER_MAPPING if INCLUSTER_MAPPING else "in-cluster"
@@ -191,7 +193,7 @@ class KubeManager:
         parts = target.split('://')
         context = parts[0]
         specific_namespace = parts[1] if len(parts) > 1 and parts[1] else None
-        group, version, plural = "cluster.x-k8s.io", "v1beta2", "clusters"
+        group, version, plural = "cluster.x-k8s.io", CLUSTER_VERSION, "clusters"
         
         try:
             custom_api = self.custom_objects(context)
