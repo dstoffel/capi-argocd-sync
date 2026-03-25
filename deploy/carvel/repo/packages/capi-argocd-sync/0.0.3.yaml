@@ -57,10 +57,10 @@ spec:
           type: string
           description: Label to identify CAPI clusters that need to be synced.
           default: argocd-sync/enabled
-        syncLabelDefaults:
+        syncLabelsDefaults:
           title: Sync Label Defaults
           type: string
-          description: Default labels to add to the ArgoCD secret.
+          description: Default labels to add to the ArgoCD secret. (eg my/label1=aze,my/label2=qsd)
           default: ""
         syncLabelPrefix:
           title: Sync Label Prefix

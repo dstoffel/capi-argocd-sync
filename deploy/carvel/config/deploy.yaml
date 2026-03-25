@@ -49,7 +49,7 @@ stringData:
   ARGOCD_DEFAULT_DESTINATION: #@ data.values.argocdDefaultDestination
   SYNC_LABEL: #@ data.values.syncLabel
   SYNC_LABEL_PREFIX: #@ data.values.syncLabelPrefix
-  SYNC_LABELS_DEFAULTS: #@ data.values.syncLabelDefaults
+  SYNC_LABELS_DEFAULTS: #@ data.values.syncLabelsDefaults
   ARGOCD_DESTINATION_ANNOTATION: #@ data.values.argocdDestinationAnnotation
   INSECURE: #@ str(data.values.insecure).lower()
   SUPERVISOR_CONTEXTS: #@ data.values.supervisorContexts
